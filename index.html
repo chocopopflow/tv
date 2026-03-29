@@ -47,27 +47,10 @@
         button:hover { background: #b00710; }
         .error { color: #ff6b6b; margin-top: 15px; }
         .info { color: #aaa; font-size: 12px; margin-top: 20px; }
-        #contenedor-video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            background: white;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .oculto {
-            display: none;
-        }
     </style>
 </head>
 <body>
-    <div id="login-box" class="login-box">
+    <div class="login-box">
         <h2>🔐 Ingresá tu código</h2>
         <input type="text" id="codigo" placeholder="Código de acceso" autocomplete="off">
         <button onclick="verificarCodigo()">Entrar</button>
@@ -75,18 +58,17 @@
         <div class="info">Tu código es personal e intransferible</div>
     </div>
 
-    <div id="contenedor-video" class="oculto">
-        <iframe id="video-iframe" src=""></iframe>
-    </div>
-
     <script>
-        // ========== ACÁ VAN TUS CÓDIGOS Y USUARIOS ==========
+        // ========== LISTA DE CÓDIGOS VÁLIDOS ==========
+        // Cada código es personal. Una vez usado por alguien, no puede ser usado por otro.
         const usuarios = {
             "CODIGO123": { usuario: "Juan", activo: false },
             "CODIGO456": { usuario: "Maria", activo: false },
             "CODIGO789": { usuario: "Pedro", activo: false }
         };
 
+        // ========== NO TOCAR NADA DE ACÁ PARA ABAJO ==========
+        
         // Cargar estado de sesiones activas desde localStorage
         function cargarSesiones() {
             const guardado = localStorage.getItem("sesiones_activas");
@@ -113,7 +95,7 @@
             localStorage.setItem("mi_id", miId);
         }
 
-        // Verificar si ya hay una sesión activa
+        // Verificar si ya hay una sesión activa para este navegador
         const sesionActual = localStorage.getItem("sesion_activa");
         if (sesionActual && usuarios[sesionActual] && usuarios[sesionActual].activo === miId) {
             mostrarVideo();
@@ -134,7 +116,7 @@
                 usuarioData.activo = miId;
                 guardarSesiones();
                 localStorage.setItem("sesion_activa", codigoIngresado);
-                mensajeDiv.innerText = "✅ ¡Código válido! Cargando...";
+                mensajeDiv.innerText = "✅ ¡Código válido! Redirigiendo...";
                 mensajeDiv.style.color = "#4CAF50";
                 setTimeout(() => {
                     mostrarVideo();
@@ -143,7 +125,7 @@
             }
             
             if (usuarioData.activo === miId) {
-                mensajeDiv.innerText = "✅ Ya estás autenticado. Cargando...";
+                mensajeDiv.innerText = "✅ Ya estás autenticado. Redirigiendo...";
                 mensajeDiv.style.color = "#4CAF50";
                 setTimeout(() => {
                     mostrarVideo();
@@ -155,11 +137,11 @@
         }
         
         function mostrarVideo() {
-            document.getElementById("login-box").classList.add("oculto");
-            document.getElementById("contenedor-video").classList.remove("oculto");
-            document.getElementById("video-iframe").src = "http://201.217.246.42:44310/?tvwatch";
+            // REDIRECCIÓN DIRECTA al contenido (la IP se ve, pero funciona)
+            window.location.href = 'http://origen.chocopopflow.com:44310/?tvwatch';
         }
         
+        // Inicializar
         cargarSesiones();
     </script>
 </body>
