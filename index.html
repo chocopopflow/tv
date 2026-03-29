@@ -47,15 +47,36 @@
         button:hover { background: #b00710; }
         .error { color: #ff6b6b; margin-top: 15px; }
         .info { color: #aaa; font-size: 12px; margin-top: 20px; }
+        #contenedor-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: white;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .oculto {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div class="login-box">
+    <div id="login-box" class="login-box">
         <h2>🔐 Ingresá tu código</h2>
         <input type="text" id="codigo" placeholder="Código de acceso" autocomplete="off">
         <button onclick="verificarCodigo()">Entrar</button>
         <div id="mensaje" class="error"></div>
         <div class="info">Tu código es personal e intransferible</div>
+    </div>
+
+    <div id="contenedor-video" class="oculto">
+        <iframe id="video-iframe" src=""></iframe>
     </div>
 
     <script>
@@ -64,10 +85,9 @@
             "CODIGO123": { usuario: "Juan", activo: false },
             "CODIGO456": { usuario: "Maria", activo: false },
             "CODIGO789": { usuario: "Pedro", activo: false }
-            // Agregá más códigos acá
         };
 
-        // Cargar estado de sesiones activas desde localStorage (persistente)
+        // Cargar estado de sesiones activas desde localStorage
         function cargarSesiones() {
             const guardado = localStorage.getItem("sesiones_activas");
             if (guardado) {
@@ -93,13 +113,10 @@
             localStorage.setItem("mi_id", miId);
         }
 
-        // Verificar si ya hay una sesión activa para este navegador
+        // Verificar si ya hay una sesión activa
         const sesionActual = localStorage.getItem("sesion_activa");
-        if (sesionActual && usuarios[sesionActual]) {
-            // Si el usuario ya estaba conectado, redirigir directamente
-            if (usuarios[sesionActual].activo === miId) {
-                window.location.href = "http://201.217.246.42:44310/?tvwatch";
-            }
+        if (sesionActual && usuarios[sesionActual] && usuarios[sesionActual].activo === miId) {
+            mostrarVideo();
         }
 
         function verificarCodigo() {
@@ -113,34 +130,36 @@
             
             const usuarioData = usuarios[codigoIngresado];
             
-            // Si el código NO está activo, lo activamos para este usuario
             if (!usuarioData.activo) {
                 usuarioData.activo = miId;
                 guardarSesiones();
                 localStorage.setItem("sesion_activa", codigoIngresado);
-                mensajeDiv.innerText = "✅ ¡Código válido! Redirigiendo...";
+                mensajeDiv.innerText = "✅ ¡Código válido! Cargando...";
                 mensajeDiv.style.color = "#4CAF50";
                 setTimeout(() => {
-                    window.location.href = "http://201.217.246.42:44310/?tvwatch";
-                }, 1000);
+                    mostrarVideo();
+                }, 500);
                 return;
             }
             
-            // Si el código ESTÁ activo pero es el MISMO usuario (mismo navegador)
             if (usuarioData.activo === miId) {
-                mensajeDiv.innerText = "✅ Ya estás autenticado. Redirigiendo...";
+                mensajeDiv.innerText = "✅ Ya estás autenticado. Cargando...";
                 mensajeDiv.style.color = "#4CAF50";
                 setTimeout(() => {
-                    window.location.href = "http://201.217.246.42:44310/?tvwatch";
-                }, 1000);
+                    mostrarVideo();
+                }, 500);
                 return;
             }
             
-            // Si el código ESTÁ activo y es OTRO usuario
             mensajeDiv.innerText = "⚠️ Este código ya está siendo usado por otra persona";
         }
         
-        // Cargar sesiones al iniciar
+        function mostrarVideo() {
+            document.getElementById("login-box").classList.add("oculto");
+            document.getElementById("contenedor-video").classList.remove("oculto");
+            document.getElementById("video-iframe").src = "http://201.217.246.42:44310/?tvwatch";
+        }
+        
         cargarSesiones();
     </script>
 </body>
