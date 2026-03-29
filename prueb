@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title> TvWatch </title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="../../css/w3.css">
+	<link rel="stylesheet" href="../../css/material-icons.css">
+	<script type="text/javascript" src="../../js/jquery.min.js"></script>
+	<script>
+    var hasMSE = !!(window.MediaSource && typeof MediaSource.isTypeSupported === 'function');
+    if (hasMSE) { var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1'; s.async = true; document.head.appendChild(s); }
+	</script>
+	<style>
+.material-icons { vertical-align:-25%; font-size: 50px; color: white;}
+body {	background-color: #000; height: 100%; width: 100%; margin: 0; padding: 0; position: absolute; overflow: hidden; }
+
+/* VIDEO ocupa todo menos el carrusel de abajo */
+video {
+  position: absolute;
+  top: 0; right: 0; left: 0;
+  bottom: 130px; /* espacio para el carrusel */
+  margin: auto;
+  width: 100%;
+  height: calc(100% - 130px);
+  z-index: 1;
+  object-fit: contain;
+}
+
+video::-internal-media-controls-overlay-cast-button {display: none;}
+
+.loading {position: absolute;top: 0;right: 0;bottom: 130px;left: 0;margin: auto;width: 200px;height: 200px;z-index: 5;-webkit-animation:spin 1s linear infinite;-moz-animation:spin 1s linear infinite;animation:spin 1s linear infinite;}
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
+.loader {position: absolute;top: 0;right: 0;bottom: 130px;left: 0;margin: auto;width: 200px;height: 200px;z-index: 5;}
+svg path, svg rect{fill: #cd6a33;}
+
+.error {position: absolute;top: 0;right: 0;bottom: 130px;left: 0;margin: auto;max-width: 300px;max-height: 200px;color: #cd6a33;z-index: 20 !important;text-align: center;background-color: rgba(0, 0, 0, 0.75);padding: 30px;}
+.mcast {position: absolute;top: 0;right: 0;bottom: 130px;left: 0;margin: auto;max-width: 300px;max-height: 200px;color: #cd6a33;z-index: 20 !important;text-align: center;background-color: rgba(0, 0, 0, 0.75);padding: 30px;}
+
+/* CONTROLES */
+.controls {position: absolute;top: 0;bottom: 130px;right: 0;left: 0;margin: auto;width: 100%;height: calc(100% - 130px);color: white;z-index: 10 !important;padding: 10px;}
+.controls-top {position: absolute;top: 0;right: 0;left: 0;text-align: left;background-color: rgba(0, 0, 0, 0.25);font-size: 2em;padding: 10px;}
+.controls-top a:hover i , .controls-top a:focus i {background: rgba(204, 204, 204, 0.5);}
+.controls-center {position: absolute;height: 10em;width: 10em;top: 0;bottom: 0;left: 0;right: 0;margin: auto;}
+.controls-center a {display: inline-block;}
+.controls-bottom {position: absolute;left: 0;right: 0;bottom: 0;}
+.btn-screen {position: absolute;right: 0;bottom: 0;}
+.controls-cast {position: absolute;right: 0;height: 50px;width: 50px;margin-right: 20px;}
+a {text-decoration: none;text-shadow:2px 0 0 #000, -2px 0 0 #000,0 2px 0 #000, 0 -2px 0 #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 5px #000;}
+.controls-bottom a {padding-left: 5px;padding-right: 5px;display: -webkit-box;display: -moz-box;display: -ms-inline-flexbox;display: -webkit-inline-flex;display: inline-flex;border-radius: 5px;}
+.controls-bottom a h5 {margin-right: 5px;}
+.controls-bottom a:hover, .controls-bottom a:focus {background: rgba(204, 204, 204, 0.5);}
+
+/* ========================
+   CARRUSEL HORIZONTAL
+   ======================== */
+#carousel-wrap {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 130px;
+  z-index: 15;
+  background: linear-gradient(to top, #0a0a0a, #111);
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+}
+
+#canal-carousel {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  gap: 8px;
+  padding: 8px 50px;
+  height: 100%;
+  align-items: center;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  flex: 1;
+}
+#canal-carousel::-webkit-scrollbar { display: none; }
+
+.canal-btn {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 108px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  padding: 6px 4px;
+  text-decoration: none;
+  text-shadow: none;
+  color: #ccc;
+  font-size: 10px;
+  text-align: center;
+  font-family: sans-serif;
+  box-sizing: border-box;
+}
+.canal-btn:hover {
+  transform: scale(1.08);
+  border-color: #cd6a33;
+  background: rgba(205, 106, 51, 0.12);
+  color: #fff;
+  text-shadow: none;
+}
+.canal-btn.active {
+  border-color: #cd6a33 !important;
+  background: rgba(205, 106, 51, 0.25) !important;
+  color: #fff !important;
+}
+.canal-btn img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+.canal-btn span {
+  display: block;
+  line-height: 1.2;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Botones de scroll izq/der */
+.scroll-arrow {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 16;
+  transition: background 0.2s;
+}
+.scroll-arrow:hover { background: rgba(205,106,51,0.5); }
+.scroll-arrow.left  { left: 0;  border-right: 1px solid #2a2a2a; }
+.scroll-arrow.right { right: 0; border-left:  1px solid #2a2a2a; }
+
+/* Ocultar lista vieja */
+.listepic { display: none !important; }
+
+@media (max-width: 500px) {
+  video { bottom: 110px; height: calc(100% - 110px); }
+  #carousel-wrap { height: 110px; }
+  .canal-btn { width: 68px; height: 94px; }
+  .canal-btn img { width: 42px; height: 42px; }
+}
+	</style>
+</head>
+<body>
+	<script>
+	var source, title, delay, hls, fatalerror, touch, thumb;
+	var session, applicationId, sessionRequest, apiConfig, Castplayer, CastController, CastTimer;
+	
+	function Play(){try{video.play();} catch(e) { /**/ }}
+	function Screen() {
+		var reques = player.requestFullscreen || player.mozRequestFullScreen || player.webkitRequestFullScreen || player.msRequestFullscreen;
+		var cancel = document.exitFullscreen || document.mozCancelFullScreen || document.webkitExitFullscreen || document.msExitFullscreen;
+		if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+		try {reques.call(player);} catch(e) { /**/ }} else {try {cancel.call(document);} catch(e) { /**/ }}
+	}	
+	</script>
+
+	<div id="player">
+		<video id="video" disableRemotePlayback autoplay poster="../images/Default.png"></video>
+		
+		<!-- Lista vieja (oculta, se mantiene por compatibilidad) -->
+		<aside class="listepic" id="listaE" style="display: none;">
+			<div class="listepic-scroll"><a onclick="scrollT()" href="javascript:void(0);"><i class="material-icons listepic-scroll-item">&#xe316;</i></a></div>
+			<div id="listaL" class="listepic-container"></div>
+			<div class="listepic-scroll"><a onclick="scrollB()" href="javascript:void(0);"><i class="material-icons listepic-scroll-item">&#xe313;</i></a></div>
+		</aside>
+
+		<div class="loader" id="loading" style="display: none;">
+			<svg width="200px" height="200px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" class="lds-eclipse" style="animation-play-state: running; animation-delay: 0s; background: none;"><path ng-attr-d="{{config.pathCmd}}" ng-attr-fill="{{config.color}}" stroke="none" d="M10 50A40 40 0 0 0 90 50A40 42 0 0 1 10 50" fill="#e15b64" transform="rotate(24 50 51)" style="animation-play-state: running; animation-delay: 0s;" class=""><animateTransform attributeName="transform" type="rotate" calcMode="linear" values="0 50 51;360 50 51" keyTimes="0;1" dur="1s" begin="0s" repeatCount="indefinite" style="animation-play-state: running; animation-delay: 0s;" class=""></animateTransform></path></svg>
+		</div>
+
+		<div id="error" class="error" style="display: none;"><h3>EL CONTENIDO NO SE PUEDE REPRODUCIR.</h3></div>
+		<div id="mcast" class="mcast" style="display: none;"></div>
+
+		<div id="controls" class="controls" style="display: none;">
+			<div class="controls-top"><div id="head"></div></div>
+			<div class="controls-center"><a id="btn-play" onclick="Play();" href="javascript:void(0)"><i class="material-icons" style="font-size: 10em;">&#xE037;</i></a></div>
+			<div class="controls-bottom">
+				<a class="btn-screen" id="btn-screen" onclick="Screen();" href="javascript:void(0)"><h5>Pantalla completa</h5> <i class="material-icons">&#xE5D0;</i></a>
+			</div>
+			<a class="controls-cast" id="btn-cast" onclick="Cast();" href="javascript:void(0)" style="display: none;"><i class="material-icons">&#xE307;</i></a>
+		</div>
+	</div>
+
+	<!-- CARRUSEL DE CANALES -->
+	<div id="carousel-wrap">
+		<button class="scroll-arrow left" onclick="carouselScroll(-1)">&#8249;</button>
+		<div id="canal-carousel"></div>
+		<button class="scroll-arrow right" onclick="carouselScroll(1)">&#8250;</button>
+	</div>
+
+<script>
+	var Streams = [{"name":"Telefe","m3u8":"telefe","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/telefe.playlist.m3u8","poster":"images\/telefe.png"},{"name":"El Trece","m3u8":"eltrece","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/eltrece.playlist.m3u8","poster":"images\/el13.png"},{"name":"TvPublica","m3u8":"tvpublica","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/tvpublica.playlist.m3u8","poster":"images\/tvpublica.png"},{"name":"TN","m3u8":"tn","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/tn.playlist.m3u8","poster":"images\/tn.png"},{"name":"Rural","m3u8":"rural","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/rural.playlist.m3u8","poster":"images\/rural.png"},{"name":"DeportTV","m3u8":"deportv","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/deportv.playlist.m3u8","poster":"images\/deportv.png"},{"name":"C5N","m3u8":"c5n","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/c5n.playlist.m3u8","poster":"images\/c5n.png"},{"name":"Crónica TV","m3u8":"CronicaTv","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/CronicaTv.playlist.m3u8","poster":"images\/CronicaTv.png"},{"name":"A24","m3u8":"a24","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/a24.playlist.m3u8","poster":"images\/A24.png"},{"name":"AR 12","m3u8":"local-21","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-21.playlist.m3u8","poster":"images\/AR12.png"},{"name":"LN+","m3u8":"lntv","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/lntv.playlist.m3u8","poster":"images\/LN.png"},{"name":"Canal 26","m3u8":"c26","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/c26.playlist.m3u8","poster":"images\/canal26.png"},{"name":"Garagetv","m3u8":"garage","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/garage.playlist.m3u8","poster":"images\/GarageTV.png"},{"name":"Telemax","m3u8":"telemax","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/telemax.playlist.m3u8","poster":"images\/telemax.png"},{"name":"TECtv","m3u8":"tectv","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/tectv.playlist.m3u8","poster":"images\/TECtv.png"},{"name":"Multivisión","m3u8":"Multivision","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/Multivision.playlist.m3u8","poster":"images\/Multivision.png"},{"name":"Ciudad Magazine","m3u8":"ciudadmagazine","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/ciudadmagazine.playlist.m3u8","poster":"images\/Ciudadmagazine.png"},{"name":"CNN español","m3u8":"CNNesp","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/CNNesp.playlist.m3u8","poster":"images\/CNNesp.png"},{"name":"CanalNet","m3u8":"CanalNet","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/CanalNet.playlist.m3u8","poster":"images\/net-tv.png"},{"name":"Nueve Litoral","m3u8":"nuevelitoral","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/nuevelitoral.playlist.m3u8","poster":"images\/NueveLitoral.png"},{"name":"Telefe Santa Fe","m3u8":"local-10","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-10.playlist.m3u8","poster":"images\/Canal13SantaFe.png"},{"name":"TvPublica 2","m3u8":"local-11","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-11.playlist.m3u8","poster":"images\/tvpublica.png"},{"name":"Somos Santa Fe","m3u8":"local-12","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-12.playlist.m3u8","poster":"images\/SomosSantaFe.png"},{"name":"Santa Fe Canal","m3u8":"local-13","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-13.playlist.m3u8","poster":"images\/Santa_Fe_Canal.png"},{"name":"E!","m3u8":"local-14","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-14.playlist.m3u8","poster":"images\/e.png"},{"name":"Canal a","m3u8":"local-15","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-15.playlist.m3u8","poster":"images\/Canal_a.png"},{"name":"Canal 9","m3u8":"local-16","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-16.playlist.m3u8","poster":"images\/canal9.png"},{"name":"America TV","m3u8":"local-17","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-17.playlist.m3u8","poster":"images\/america.png"},{"name":"Canal 9 Parana","m3u8":"local-18","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-18.playlist.m3u8","poster":"images\/NueveLitoral.png"},{"name":"Encuentro","m3u8":"local-19","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-19.playlist.m3u8","poster":"images\/encuentro.png"},{"name":"Cine AR","m3u8":"local-20","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-20.playlist.m3u8","poster":"images\/cinear.png"},{"name":"RAI","m3u8":"local-22","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-22.playlist.m3u8","poster":"images\/RaiItalia.png"},{"name":"RT","m3u8":"local-98","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-98.playlist.m3u8","poster":"images\/RT.png"},{"name":"TVE","m3u8":"local-23","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-23.playlist.m3u8","poster":"images\/TVE.png"},{"name":"El Garage","m3u8":"local-24","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-24.playlist.m3u8","poster":"images\/GarageTV.png"},{"name":"El Gourmet","m3u8":"local-25","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-25.playlist.m3u8","poster":"images\/elgourmet.png"},{"name":"Lifetime","m3u8":"Lifetime","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/Lifetime.playlist.m3u8","poster":"images\/Lifetime.png"},{"name":"Telemundo","m3u8":"local-26","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-26.playlist.m3u8","poster":"images\/Telemundo.png"},{"name":"Las Estrellas","m3u8":"lasestrellas","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/lasestrellas.playlist.m3u8","poster":"images\/las-estrellas.png"},{"name":"Cartoonito","m3u8":"local-30","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-30.playlist.m3u8","poster":"images\/Cartoonito.png"},{"name":"Cartoon Network","m3u8":"local-31","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-31.playlist.m3u8","poster":"images\/CartoonNetwork.png"},{"name":"Disney Channel","m3u8":"local-32","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-32.playlist.m3u8","poster":"images\/DisneyChannel.png"},{"name":"Nickelodeon","m3u8":"local-33","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-33.playlist.m3u8","poster":"images\/Nickelodeon.png"},{"name":"Discovery Kids","m3u8":"local-34","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-34.playlist.m3u8","poster":"images\/DiscoveryKids.png"},{"name":"Disney Jr","m3u8":"local-35","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-35.playlist.m3u8","poster":"images\/DisneyJunior.png"},{"name":"Paka Paka","m3u8":"local-36","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-36.playlist.m3u8","poster":"images\/pakapaka.png"},{"name":"History","m3u8":"local-40","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-40.playlist.m3u8","poster":"images\/HistoryChannel.png"},{"name":"History 2","m3u8":"local-41","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-41.playlist.m3u8","poster":"images\/history2.png"},{"name":"Discovery ID","m3u8":"local-42","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-42.playlist.m3u8","poster":"images\/InvestigationDiscovery.png"},{"name":"h&h","m3u8":"local-43","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-43.playlist.m3u8","poster":"images\/h&h.png"},{"name":"Discovery","m3u8":"local-44","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-44.playlist.m3u8","poster":"images\/DiscoveryChannel.png"},{"name":"Discovery Turbo","m3u8":"local-99","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-99.playlist.m3u8","poster":"images\/DiscoveryTurbo.png"},{"name":"Animal Planet","m3u8":"local-45","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-45.playlist.m3u8","poster":"images\/animalplanet.png"},{"name":"National Geographic","m3u8":"local-46","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-46.playlist.m3u8","poster":"images\/NationalGeographic.png"},{"name":"MTV","m3u8":"local-50","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-50.playlist.m3u8","poster":"images\/mtvhd.png"},{"name":"Quiero Musica","m3u8":"local-51","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-51.playlist.m3u8","poster":"images\/qmusica.png"},{"name":"Stingray Concerts","m3u8":"local-111","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-111.playlist.m3u8","poster":"images\/StingrayConcerts.png"},{"name":"Metro","m3u8":"local-53","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-53.playlist.m3u8","poster":"images\/metro.png"},{"name":"KZO","m3u8":"local-52","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-52.playlist.m3u8","poster":"images\/KZO.png"},{"name":"Comedy Central","m3u8":"local-60","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-60.playlist.m3u8","poster":"images\/comedycentral.png"},{"name":"Cinemax","m3u8":"local-61","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-61.playlist.m3u8","poster":"images\/cinemax.png"},{"name":"Cinecanal","m3u8":"local-62","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-62.playlist.m3u8","poster":"images\/cinecanal.png"},{"name":"TNT Series","m3u8":"local-64","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-64.playlist.m3u8","poster":"images\/tntseries.png"},{"name":"TNT Novelas","m3u8":"local-65","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-65.playlist.m3u8","poster":"images\/TNT_Novelas.png"},{"name":"TNT","m3u8":"local-66","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-66.playlist.m3u8","poster":"images\/tnt.png"},{"name":"Studio Universal","m3u8":"local-67","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-67.playlist.m3u8","poster":"images\/studiouniversal.png"},{"name":"Star Channel","m3u8":"local-68","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-68.playlist.m3u8","poster":"images\/StarChannel.png"},{"name":"Space","m3u8":"local-69","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-69.playlist.m3u8","poster":"images\/Space.png"},{"name":"Sony","m3u8":"local-70","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-70.playlist.m3u8","poster":"images\/sony.png"},{"name":"A&E","m3u8":"local-71","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-71.playlist.m3u8","poster":"images\/AyE.png"},{"name":"Film & Arts","m3u8":"local-FilmyArt","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-FilmyArt.playlist.m3u8","poster":"images\/FilmyArts.png"},{"name":"Paramount","m3u8":"local-72","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-72.playlist.m3u8","poster":"images\/Paramount.png"},{"name":"TLC","m3u8":"tlc","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/tlc.playlist.m3u8","poster":"images\/TLC.png"},{"name":"Warner Channel","m3u8":"local-73","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-73.playlist.m3u8","poster":"images\/warner.png"},{"name":"Volver","m3u8":"local-74","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-74.playlist.m3u8","poster":"images\/volver.png"},{"name":"Universal Channel","m3u8":"local-75","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-75.playlist.m3u8","poster":"images\/UniversalChannel.png"},{"name":"AMC","m3u8":"local-76","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-76.playlist.m3u8","poster":"images\/amc.png"},{"name":"AXN","m3u8":"local-77","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-77.playlist.m3u8","poster":"images\/axn.png"},{"name":"FX","m3u8":"local-78","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-78.playlist.m3u8","poster":"images\/FX.png"},{"name":"TCM","m3u8":"local-79","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-79.playlist.m3u8","poster":"images\/tcm.png"},{"name":"Bravo","m3u8":"local-80","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-80.playlist.m3u8","poster":"images\/Bravo.png"},{"name":"HBO","m3u8":"local-102","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-102.playlist.m3u8","poster":"images\/hbo.png"},{"name":"HBO PLUS","m3u8":"local-109","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-109.playlist.m3u8","poster":"images\/HBOPlus.png"},{"name":"HBO Family","m3u8":"local-101","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-101.playlist.m3u8","poster":"images\/HBOFamily.png"},{"name":"HBO Signature","m3u8":"local-107","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-107.playlist.m3u8","poster":"images\/HBOSignature.png"},{"name":"HBO XTREME","m3u8":"local-103","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-103.playlist.m3u8","poster":"images\/HBOXtreme.png"},{"name":"HBO MUNDI","m3u8":"local-110","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-110.playlist.m3u8","poster":"images\/HBOMundi.png"},{"name":"HBO POP","m3u8":"local-108","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-108.playlist.m3u8","poster":"images\/HBOPop.png"},{"name":"HBO 2","m3u8":"local-105","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-105.playlist.m3u8","poster":"images\/hbo2.png"},{"name":"Evento 1","m3u8":"local-01","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-01.playlist.m3u8","poster":"images\/evento1.png"},{"name":"Evento 2","m3u8":"local-02","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-02.playlist.m3u8","poster":"images\/evento2.png"},{"name":"Evento 3","m3u8":"local-03","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-03.playlist.m3u8","poster":"images\/evento3.png"},{"name":"Evento 4","m3u8":"local-04","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-04.playlist.m3u8","poster":"images\/evento4.png"},{"name":"Evento 5","m3u8":"local-05","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-05.playlist.m3u8","poster":"images\/evento5.png"},{"name":"Evento 6","m3u8":"local-06","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-06.playlist.m3u8","poster":"images\/evento6.png"},{"name":"Evento 7","m3u8":"local-e07","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-e07.playlist.m3u8","poster":"images\/evento7.png"},{"name":"Evento 8","m3u8":"local-e08","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-e08.playlist.m3u8","poster":"images\/evento8.png"},{"name":"Evento 9","m3u8":"local-e09","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-e09.playlist.m3u8","poster":"images\/evento9.png"},{"name":"Evento 10","m3u8":"local-e10","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-e10.playlist.m3u8","poster":"images\/evento10.png"},{"name":"Evento 11","m3u8":"local-e11","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-e11.playlist.m3u8","poster":"images\/evento11.png"},{"name":"Evento 12","m3u8":"local-e12","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-e12.playlist.m3u8","poster":"images\/evento12.png"},{"name":"TyC Sports","m3u8":"local-90","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-90.playlist.m3u8","poster":"images\/TycSports.png"},{"name":"Fox Sports","m3u8":"local-91","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-91.playlist.m3u8","poster":"images\/foxsports.png"},{"name":"Fox Sports 3","m3u8":"local-92","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-92.playlist.m3u8","poster":"images\/FoxSports3.png"},{"name":"Fox Sports 2","m3u8":"local-93","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-93.playlist.m3u8","poster":"images\/foxsports2.png"},{"name":"ESPN","m3u8":"local-94","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-94.playlist.m3u8","poster":"images\/espn.png"},{"name":"ESPN 4","m3u8":"local-95","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-95.playlist.m3u8","poster":"images\/espn4.png"},{"name":"ESPN 3","m3u8":"local-96","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-96.playlist.m3u8","poster":"images\/espn3.png"},{"name":"ESPN 2","m3u8":"local-97","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-97.playlist.m3u8","poster":"images\/espn2.png"},{"name":"ESPN 5","m3u8":"local-104","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-104.playlist.m3u8","poster":"images\/espn5.png"},{"name":"ESPN 7","m3u8":"local-106","url":"http:\/\/201.217.246.42:44310\/Live\/a8a0dc318cc5a076f84bea2206893142\/local-106.playlist.m3u8","poster":"images\/espn7.png"}];
+
+	var player = document.getElementById('player');
+	var video = document.getElementById('video');
+	var blist = document.getElementById("listaE"); 
+	var elmnt = document.getElementById("listaL"); 
+	var wait = document.getElementById("loading");
+	var error = document.getElementById("error");	
+	var mcast = document.getElementById("mcast");	
+	var head = document.getElementById("head");	
+	var controls = document.getElementById("controls"); 
+	var btn_play = document.getElementById("btn-play");
+	var btn_screen = document.getElementById("btn-screen");	
+	var btn_cast = document.getElementById("btn-cast");	
+	var _playerDelayId = null;
+	var carousel = document.getElementById("canal-carousel");
+	
+	function Pause(){video.pause();}
+	function Stop(){video.pause(); video.src = null;}
+	function Hplay(){btn_play.style.display = 'none';}
+	function Smenu(){controls.style.display = 'block'; }
+	function Hmenu(){if(fatalerror){return;} controls.style.display = 'none';}
+	function Swait(){wait.style.display = 'block'; }
+	function Hwait(){wait.style.display = 'none'; }
+	function Serror(){Hwait(); if(session){ mcast.style.display = 'block'; } else {fatalerror = true; error.style.display = 'block'; setTitle('Error...');}}
+	function Herror(){error.style.display = 'none'; mcast.style.display = 'none'; setTitle(title);}	
+	function Progress(){if(!session){if(video.readyState > 2){if(video.paused){Play();}}}}
+	function Playing(){Hwait(); Herror(); Hplay(); startDelay();}
+	function Waiting(){if(session){Hwait(); return;} if(video.readyState > 1){return;} Swait();}
+	function scrollB(){elmnt.scrollTop += 40;}
+	function scrollT(){elmnt.scrollTop -= 40;}	
+	function startDelay(){delay = setTimeout(Hmenu, 10000);}
+	function resetDelay(){clearTimeout(delay);}
+	function Menu(){Smenu(); resetDelay(); startDelay();}
+
+	function carouselScroll(dir) {
+		carousel.scrollBy({ left: dir * 300, behavior: 'smooth' });
+	}
+	
+	function Timeupdate(){if(fatalerror){return;}if(video.readyState > 0){if(!video.paused){Hplay();}}if(video.readyState > 1){if(!video.paused){Hwait();}}if(navigator.userAgent.match(/iPhone/i)){return;}if(video.readyState > 2){if(video.paused){try{Play();} catch(e) { /**/ }}}}
+	
+	function setTitle(str){head.innerHTML = '<a href="javascript:window.history.back();"><i class="material-icons">&#xe5cb;</i></a><span>' + str + '</span>'; document.title = str;}
+
+	function Player(source, name, poster){
+		Herror(); Swait(); title = name; setTitle(title); fatalerror = null; 
+		setTimeout(clearHashFromUrl, 100);
+		try {
+			document.querySelectorAll('.canal-btn').forEach(function(b){ b.classList.remove('active'); });
+			var ch = null, i;
+			for (i = 0; i < Streams.length; i++) {
+				if (Streams[i].name === name || Streams[i].url === source) { ch = Streams[i]; break; }
+			}
+			if (ch) {
+				var btn = document.getElementById('CID' + ch.m3u8);
+				if (btn) {
+					btn.classList.add('active');
+					btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+				}
+				currentChannelM3U8 = ch.m3u8;
+			}
+		} catch (e) {}
+		error.innerHTML = '<h3>EL CANAL NO ESTÁ DISPONIBLE, INTENTA MAS TARDE.</h3>';
+		try {hls.destroy(); hls.detachMedia();} catch(e) {}
+		if(session){destroy();}
+		var type = "video/mp4";
+		if(source.match(/.webm/i)){type = "video/webm";}
+		if(source.match(/.mp3/i)){type = "audio/mpeg";}
+		if(source.match(/.aac/i)){type = "audio/mp4";}
+		if(source.match(/.mp4/i)){type = "video/mp4";}
+		if(source.match(/.m3u8/i)){type = "application/vnd.apple.mpegurl";}
+		if(poster != null) try {video.poster = poster;} catch(e) {video.poster = '';} else {video.poster = '';}
+		if (_playerDelayId) { clearTimeout(_playerDelayId); }
+		_playerDelayId = setTimeout(function () {
+			_playerDelayId = null;
+			var isHlsSupported = (typeof window.Hls !== 'undefined' && typeof Hls.isSupported === 'function' && Hls.isSupported());
+			if (isHlsSupported && (/\.m3u8/i).test(source)) {
+				hls = new Hls({manifestLoadingTimeOut: 2e4, manifestLoadingMaxRetry: 4});
+				hls.autoLevelEnabled = true;
+				hls.bandwidthEstimate = 2500000;
+				hls.loadSource(source);
+				hls.attachMedia(video);
+				hls.on(Hls.Events.MANIFEST_PARSED, function() {Playing(); Play();});
+				hls.on(Hls.Events.ERROR, function (event, data) {
+					if(data.fatal){
+						switch(data.type){
+							case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+							default: hls.destroy(); Serror(); break;
+						}
+					}
+				});
+				return;
+			}
+			if(video.canPlayType(type)){video.src = source; video.load(); video.addEventListener('loadedmetadata',function() {Playing(); Play();}); return;}
+			error.innerHTML = '<h3>CONTENIDO NO SOPORTADO POR EL NAVEGADOR</h3>';
+			Serror();
+		}, 1000);
+	}
+
+	// Construye el carrusel y también mantiene la lista oculta para compatibilidad
+	function Chanels(chanel){
+		var carouselEl = document.getElementById('canal-carousel');
+		Streams.forEach(function(element){
+			// Carrusel
+			var btn = document.createElement('a');
+			btn.id = 'CID' + element['m3u8'];
+			btn.className = 'canal-btn';
+			btn.href = 'javascript:void(0)';
+			btn.innerHTML = '<img src="' + element['poster'] + '" alt="' + element['name'] + '" onerror="this.style.display=\'none\'"><span>' + element['name'] + '</span>';
+			btn.onclick = (function(el){ return function(){ Player(el['url'], el['name'], el['poster']); }; })(element);
+			carouselEl.appendChild(btn);
+
+			// Lista vieja (oculta)
+			elmnt.innerHTML += '<a id="ID'+element['m3u8']+'" onclick="Player('+"'"+element['url']+"','"+element['name']+"','"+element['poster']+"'"+')" href="javascript:void(0)" class="listepic-link"> '+ element['name'] +' </a>';
+
+			if(element['m3u8'] == chanel){source = element['url']; title = element['name']; poster = element['poster'];}
+		});
+		if(source){Player(source, title, poster);}
+	}
+	
+	var currentChannelM3U8 = null;
+	function clearHashFromUrl() {try {var base = location.pathname + location.search; if (history && history.replaceState) {history.replaceState(null, '', base);}} catch (e) {}}
+	function getCurrentChannelIndex() {if (currentChannelM3U8) {for (var i = 0; i < Streams.length; i++) {if (Streams[i].m3u8 === currentChannelM3U8) return i;}}return 0;}
+	
+	function changeChannel(delta) {
+		var idx = getCurrentChannelIndex();
+		idx = (idx + delta + Streams.length) % Streams.length;
+		var ch = Streams[idx];
+		currentChannelM3U8 = ch.m3u8;
+		try {
+			document.querySelectorAll('.canal-btn').forEach(function(b){ b.classList.remove('active'); });
+			var btn = document.getElementById('CID' + ch.m3u8);
+			if (btn) { btn.classList.add('active'); btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }
+		} catch (e) {}
+		Player(ch.url, ch.name, ch.poster);
+	}
+
+	function HandleRemote(event) {
+		var code = event.keyCode || event.which;
+		var key  = event.key || '';
+		if (key === 'ChannelUp' || code === 427 || key === 'PageUp' || code === 33 || key === 'ArrowUp' || code === 38 || code === 19) {event.preventDefault(); changeChannel(-1); return;}
+		if (key === 'ChannelDown' || code === 428 || key === 'PageDown' || code === 34 || key === 'ArrowDown' || code === 40 || code === 20) {event.preventDefault(); changeChannel(+1); return;}
+	}
+	
+	try {
+		var chan = window.location.hash ? window.location.hash.substr(1) : '';
+		var found = false;
+		if (chan && typeof Streams !== 'undefined') {
+			for (var i = 0; i < Streams.length; i++) {
+				if (Streams[i].m3u8 === chan) { currentChannelM3U8 = chan; found = true; break; }
+			}
+		}
+		if (!found && Streams && Streams.length > 0) { currentChannelM3U8 = Streams[0].m3u8; }
+	} catch (e) {
+		try { if (Streams && Streams.length > 0) { currentChannelM3U8 = Streams[0].m3u8; } } catch (_) {}
+	}
+
+	if(Streams != null){ Chanels(chan); } Smenu();
+
+	// Scroll al canal activo en el carrusel al inicio
+	try {
+		var initBtn = document.getElementById('CID' + (chan || currentChannelM3U8));
+		if (initBtn) { setTimeout(function(){ initBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }, 500); }
+	} catch(e) {}
+
+	function SendError(message) { return; }
+
+	window.onload = function () {
+		document.oncontextmenu = function(){return false;}
+		try {video.removeAttribute('controls');} catch(e) {}
+		if (player.addEventListener){
+			video.addEventListener("playing", Playing);		
+			video.addEventListener("waiting", Waiting);		
+			video.addEventListener("interruptend", Serror);
+			video.addEventListener("error", Serror);
+			video.addEventListener("progress", Progress);
+			video.addEventListener('play', Hplay);
+			try {document.addEventListener("keyup", Menu);} catch(e) {}
+			try {document.addEventListener("touchstart", Menu);} catch(e) {}
+			try {document.addEventListener("mousemove", Menu);} catch(e) {}
+			try {window.addEventListener("keypress", HandleRemote);} catch(e) {}
+			try {window.addEventListener("keydown", HandleRemote);} catch(e) {}
+		}
+		setInterval(Timeupdate, 1000);
+	}
+</script>
+</body>
+</html>
