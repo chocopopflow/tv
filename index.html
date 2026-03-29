@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso TV - Chocopop Flow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+        .login-box {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 300px;
+        }
+        h2 { color: white; margin-bottom: 20px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #e50914;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #b00710; }
+        .error { color: #ff6b6b; margin-top: 15px; }
+        .info { color: #aaa; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>🔐 Ingresá tu código</h2>
+        <input type="text" id="codigo" placeholder="Código de acceso" autocomplete="off">
+        <button onclick="verificarCodigo()">Entrar</button>
+        <div id="mensaje" class="error"></div>
+        <div class="info">Tu código es personal e intransferible</div>
+    </div>
+
+    <script>
+        // ========== ACÁ VAN TUS CÓDIGOS Y USUARIOS ==========
+        const usuarios = {
+            "CODIGO123": { usuario: "Juan", activo: false },
+            "CODIGO456": { usuario: "Maria", activo: false },
+            "CODIGO789": { usuario: "Pedro", activo: false }
+            // Agregá más códigos acá
+        };
+
+        // Cargar estado de sesiones activas desde localStorage (persistente)
+        function cargarSesiones() {
+            const guardado = localStorage.getItem("sesiones_activas");
+            if (guardado) {
+                const activos = JSON.parse(guardado);
+                for (const [codigo, estado] of Object.entries(activos)) {
+                    if (usuarios[codigo]) usuarios[codigo].activo = estado;
+                }
+            }
+        }
+
+        function guardarSesiones() {
+            const activos = {};
+            for (const [codigo, data] of Object.entries(usuarios)) {
+                activos[codigo] = data.activo;
+            }
+            localStorage.setItem("sesiones_activas", JSON.stringify(activos));
+        }
+
+        // ID único para este navegador
+        let miId = localStorage.getItem("mi_id");
+        if (!miId) {
+            miId = crypto.randomUUID();
+            localStorage.setItem("mi_id", miId);
+        }
+
+        // Verificar si ya hay una sesión activa para este navegador
+        const sesionActual = localStorage.getItem("sesion_activa");
+        if (sesionActual && usuarios[sesionActual]) {
+            // Si el usuario ya estaba conectado, redirigir directamente
+            if (usuarios[sesionActual].activo === miId) {
+                window.location.href = "http://201.217.246.42:44310/?tvwatch";
+            }
+        }
+
+        function verificarCodigo() {
+            const codigoIngresado = document.getElementById("codigo").value.trim();
+            const mensajeDiv = document.getElementById("mensaje");
+            
+            if (!usuarios[codigoIngresado]) {
+                mensajeDiv.innerText = "❌ Código incorrecto";
+                return;
+            }
+            
+            const usuarioData = usuarios[codigoIngresado];
+            
+            // Si el código NO está activo, lo activamos para este usuario
+            if (!usuarioData.activo) {
+                usuarioData.activo = miId;
+                guardarSesiones();
+                localStorage.setItem("sesion_activa", codigoIngresado);
+                mensajeDiv.innerText = "✅ ¡Código válido! Redirigiendo...";
+                mensajeDiv.style.color = "#4CAF50";
+                setTimeout(() => {
+                    window.location.href = "http://201.217.246.42:44310/?tvwatch";
+                }, 1000);
+                return;
+            }
+            
+            // Si el código ESTÁ activo pero es el MISMO usuario (mismo navegador)
+            if (usuarioData.activo === miId) {
+                mensajeDiv.innerText = "✅ Ya estás autenticado. Redirigiendo...";
+                mensajeDiv.style.color = "#4CAF50";
+                setTimeout(() => {
+                    window.location.href = "http://201.217.246.42:44310/?tvwatch";
+                }, 1000);
+                return;
+            }
+            
+            // Si el código ESTÁ activo y es OTRO usuario
+            mensajeDiv.innerText = "⚠️ Este código ya está siendo usado por otra persona";
+        }
+        
+        // Cargar sesiones al iniciar
+        cargarSesiones();
+    </script>
+</body>
+</html>
